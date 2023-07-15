@@ -6,14 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/integrii/flaggy"
 )
 
 type cliArgs struct {
-	IgnoreDir string
-	BaseDir   string
-	Term      string
+	IgnoreDirs []string
+	BaseDir    string
+	Term       string
 }
 
 type dirMatch struct {
@@ -27,6 +28,11 @@ type match struct {
 	Number int
 }
 
+var (
+	DIRECTORIES_SEARCHED int
+	FILES_SEARCHED       int
+)
+
 func main() {
 	cliArgs := parseCommandLineArguments()
 
@@ -34,7 +40,8 @@ func main() {
 		log.Fatal("Please specify a search term (-term <some_term>)")
 	}
 
-	dirMatches := searchDirectory(cliArgs.BaseDir, cliArgs.Term, cliArgs.IgnoreDir)
+	start := time.Now()
+	dirMatches := searchDirectory(cliArgs.BaseDir, cliArgs.Term, cliArgs.IgnoreDirs)
 
 	for _, dirMatch := range dirMatches {
 		filePath := filepath.Join(dirMatch.Directory, dirMatch.File)
@@ -42,9 +49,12 @@ func main() {
 			fmt.Printf("%v:%v - %v\n", filePath, match.Number, match.Line)
 		}
 	}
+
+	elapsed := time.Since(start)
+	fmt.Printf("Took %s to traverse %d directories and %d files", elapsed, DIRECTORIES_SEARCHED, FILES_SEARCHED)
 }
 
-func searchDirectory(directory, term, ignoreDir string) []dirMatch {
+func searchDirectory(directory, term string, ignoreDirs []string) []dirMatch {
 	files, err := os.ReadDir(directory)
 	if err != nil {
 		log.Fatal(err)
@@ -55,11 +65,11 @@ func searchDirectory(directory, term, ignoreDir string) []dirMatch {
 		filePath := filepath.Join(directory, file.Name())
 
 		if file.IsDir() {
-			if strings.Contains(file.Name(), ignoreDir) {
+			if len(ignoreDirs) > 0 && contains(ignoreDirs, file.Name()) {
 				continue
 			}
-			// todo: implement recursion
-			dirMatches = append(dirMatches, searchDirectory(filePath, term, ignoreDir)...)
+			DIRECTORIES_SEARCHED++
+			dirMatches = append(dirMatches, searchDirectory(filePath, term, ignoreDirs)...)
 			continue
 		}
 
@@ -67,6 +77,8 @@ func searchDirectory(directory, term, ignoreDir string) []dirMatch {
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		FILES_SEARCHED++
 
 		matches := scanFileForTerm(contents, term)
 
@@ -78,7 +90,15 @@ func searchDirectory(directory, term, ignoreDir string) []dirMatch {
 	}
 
 	return dirMatches
+}
 
+func contains(arr []string, target string) bool {
+	for _, el := range arr {
+		if el == target {
+			return true
+		}
+	}
+	return false
 }
 
 func scanFileForTerm(contents []byte, term string) []match {
@@ -103,7 +123,7 @@ func scanFileForTerm(contents []byte, term string) []match {
 
 func parseCommandLineArguments() *cliArgs {
 	var ignoreDir string
-	flaggy.String(&ignoreDir, "ignoreDir", "ignore", "Name of directories to ignore")
+	flaggy.String(&ignoreDir, "ignore", "ignoreDir", "Name(s) of directories to ignore (comma-separated)")
 
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -111,16 +131,22 @@ func parseCommandLineArguments() *cliArgs {
 	}
 
 	var baseDir string = currentDir
-	flaggy.String(&baseDir, "base", "baseDir", "Base directory path to start from (defaults to current directory)")
+	flaggy.String(&baseDir, "base", "baseDir", "Base directory path to start from")
 
 	var term string
 	flaggy.String(&term, "term", "searchTerm", "Term to search")
 
 	flaggy.Parse()
 
+	dirs := strings.Split(ignoreDir, ",")
+
+	for i, dir := range dirs {
+		dirs[i] = strings.TrimSpace(dir)
+	}
+
 	return &cliArgs{
-		IgnoreDir: ignoreDir,
-		BaseDir:   baseDir,
-		Term:      term,
+		IgnoreDirs: dirs,
+		BaseDir:    baseDir,
+		Term:       term,
 	}
 }
