@@ -52,16 +52,17 @@ func searchDirectory(directory, term, ignoreDir string) []dirMatch {
 
 	var dirMatches []dirMatch
 	for _, file := range files {
+		filePath := filepath.Join(directory, file.Name())
+
 		if file.IsDir() {
 			if strings.Contains(file.Name(), ignoreDir) {
 				continue
 			}
 			// todo: implement recursion
+			dirMatches = append(dirMatches, searchDirectory(filePath, term, ignoreDir)...)
 			continue
 		}
 		fmt.Println(file.Name(), file.IsDir())
-
-		filePath := filepath.Join(directory, file.Name())
 
 		contents, err := os.ReadFile(filePath)
 		if err != nil {
