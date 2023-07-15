@@ -62,7 +62,6 @@ func searchDirectory(directory, term, ignoreDir string) []dirMatch {
 			dirMatches = append(dirMatches, searchDirectory(filePath, term, ignoreDir)...)
 			continue
 		}
-		fmt.Println(file.Name(), file.IsDir())
 
 		contents, err := os.ReadFile(filePath)
 		if err != nil {
