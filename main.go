@@ -111,10 +111,10 @@ func parseCommandLineArguments() *cliArgs {
 	}
 
 	var baseDir string = currentDir
-	flaggy.String(&baseDir, "baseDir", "base", "Base directory path to start from (defaults to current directory)")
+	flaggy.String(&baseDir, "base", "baseDir", "Base directory path to start from (defaults to current directory)")
 
 	var term string
-	flaggy.String(&term, "term", "search term", "Term to search")
+	flaggy.String(&term, "term", "searchTerm", "Term to search")
 
 	flaggy.Parse()
 
