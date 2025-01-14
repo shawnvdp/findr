@@ -3,3 +3,6 @@ run:
 
 build:
 	go build -o findr.exe
+
+test:
+	go test -v
