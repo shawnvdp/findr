@@ -78,7 +78,7 @@ func main() {
 	close(taskChan)
 
 	elapsed := time.Since(start)
-	fmt.Printf("Took %s to traverse %d directories and %d files", elapsed, DIRECTORIES_SEARCHED, FILES_SEARCHED)
+	fmt.Printf("Took %s to traverse %d directories and %d files\n", elapsed, DIRECTORIES_SEARCHED, FILES_SEARCHED)
 }
 
 func searchDirectory(wg *sync.WaitGroup, directory, term string, ignoreDirs []string, ignoreExts []string, matchChan chan dirMatch, taskChan chan string) {
