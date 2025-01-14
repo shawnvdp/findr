@@ -51,11 +51,12 @@ func main() {
 	taskChan := make(chan string, 1024)
 	maxWorkers := runtime.NumCPU()
 	wg := &sync.WaitGroup{}
+	logWg := &sync.WaitGroup{}
 
 	for i := 0; i < maxWorkers; i++ {
 		go (func() {
 			for dir := range taskChan {
-				searchDirectory(wg, dir, cliArgs.Term, cliArgs.IgnoreDirs, cliArgs.IgnoreExts, dirMatches, taskChan)
+				searchDirectory(wg, logWg, dir, cliArgs.Term, cliArgs.IgnoreDirs, cliArgs.IgnoreExts, dirMatches, taskChan)
 				wg.Done()
 			}
 		})()
@@ -67,6 +68,7 @@ func main() {
 			for _, match := range match.Matches {
 				fmt.Printf("%v:%v - %v\n", filePath, match.Number, match.Line)
 			}
+			logWg.Done()
 		}
 	}()
 
@@ -74,14 +76,16 @@ func main() {
 	taskChan <- cliArgs.BaseDir
 
 	wg.Wait()
-	close(dirMatches)
 	close(taskChan)
+
+	logWg.Wait()
+	close(dirMatches)
 
 	elapsed := time.Since(start)
 	fmt.Printf("Took %s to traverse %d directories and %d files\n", elapsed, DIRECTORIES_SEARCHED, FILES_SEARCHED)
 }
 
-func searchDirectory(wg *sync.WaitGroup, directory, term string, ignoreDirs []string, ignoreExts []string, matchChan chan dirMatch, taskChan chan string) {
+func searchDirectory(wg *sync.WaitGroup, logWg *sync.WaitGroup, directory, term string, ignoreDirs []string, ignoreExts []string, matchChan chan dirMatch, taskChan chan string) {
 	files, err := os.ReadDir(directory)
 	if err != nil {
 		log.Fatal(err)
@@ -117,6 +121,7 @@ func searchDirectory(wg *sync.WaitGroup, directory, term string, ignoreDirs []st
 			continue
 		}
 
+		logWg.Add(1)
 		matchChan <- dirMatch{Directory: directory, File: file.Name(), Matches: matches}
 	}
 }
