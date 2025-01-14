@@ -1,4 +1,4 @@
-module github.com/shawnvdp/scanr
+module github.com/shawnvdp/findr
 
 go 1.20
 
