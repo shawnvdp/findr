@@ -155,7 +155,7 @@ func parseCommandLineArguments() *cliArgs {
 	flaggy.String(&ignoreDir, "xd", "ignoreDir", "Name(s) of directories to ignore (comma-separated)")
 
 	var ignoreExt string
-	flaggy.String(&ignoreExt, "xe", "ignoreExt", "File extensions to ignore (comma-separated)")
+	flaggy.String(&ignoreExt, "xe", "ignoreExt", "File extension(s) to ignore (comma-separated)")
 
 	currentDir, err := os.Getwd()
 	if err != nil {
