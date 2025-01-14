@@ -1,19 +1,20 @@
-name: Go
+name: Continuous Integration
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
 
 jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-    - uses: actions/checkout@v4
-    - name: Setup Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.20'
-    - name: Test code
-      run: go test -v ./...
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.20"
+      - name: Test code
+        run: go test -v ./...
