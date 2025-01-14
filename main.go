@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/integrii/flaggy"
@@ -13,6 +16,7 @@ import (
 
 type cliArgs struct {
 	IgnoreDirs []string
+	IgnoreExts []string
 	BaseDir    string
 	Term       string
 }
@@ -41,26 +45,47 @@ func main() {
 	}
 
 	start := time.Now()
-	dirMatches := searchDirectory(cliArgs.BaseDir, cliArgs.Term, cliArgs.IgnoreDirs)
 
-	for _, dirMatch := range dirMatches {
-		filePath := filepath.Join(dirMatch.Directory, dirMatch.File)
-		for _, match := range dirMatch.Matches {
-			fmt.Printf("%v:%v - %v\n", filePath, match.Number, match.Line)
-		}
+	dirMatches := make(chan dirMatch)
+	taskChan := make(chan string, 1024)
+	maxWorkers := runtime.NumCPU()
+	wg := &sync.WaitGroup{}
+
+	for i := 0; i < maxWorkers; i++ {
+		go (func() {
+			for dir := range taskChan {
+				searchDirectory(wg, dir, cliArgs.Term, cliArgs.IgnoreDirs, cliArgs.IgnoreExts, dirMatches, taskChan)
+				wg.Done()
+			}
+		})()
 	}
+
+	go func() {
+		for match := range dirMatches {
+			filePath := filepath.Join(match.Directory, match.File)
+			for _, match := range match.Matches {
+				fmt.Printf("%v:%v - %v\n", filePath, match.Number, match.Line)
+			}
+		}
+	}()
+
+	wg.Add(1)
+	taskChan <- cliArgs.BaseDir
+
+	wg.Wait()
+	close(dirMatches)
+	close(taskChan)
 
 	elapsed := time.Since(start)
 	fmt.Printf("Took %s to traverse %d directories and %d files", elapsed, DIRECTORIES_SEARCHED, FILES_SEARCHED)
 }
 
-func searchDirectory(directory, term string, ignoreDirs []string) []dirMatch {
+func searchDirectory(wg *sync.WaitGroup, directory, term string, ignoreDirs []string, ignoreExts []string, matchChan chan dirMatch, taskChan chan string) {
 	files, err := os.ReadDir(directory)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var dirMatches []dirMatch
 	for _, file := range files {
 		filePath := filepath.Join(directory, file.Name())
 
@@ -69,7 +94,12 @@ func searchDirectory(directory, term string, ignoreDirs []string) []dirMatch {
 				continue
 			}
 			DIRECTORIES_SEARCHED++
-			dirMatches = append(dirMatches, searchDirectory(filePath, term, ignoreDirs)...)
+			wg.Add(1)
+			taskChan <- filePath
+			continue
+		}
+
+		if contains(ignoreExts, path.Ext(file.Name())) {
 			continue
 		}
 
@@ -86,10 +116,8 @@ func searchDirectory(directory, term string, ignoreDirs []string) []dirMatch {
 			continue
 		}
 
-		dirMatches = append(dirMatches, dirMatch{Directory: directory, File: file.Name(), Matches: matches})
+		matchChan <- dirMatch{Directory: directory, File: file.Name(), Matches: matches}
 	}
-
-	return dirMatches
 }
 
 func contains(arr []string, target string) bool {
@@ -123,7 +151,10 @@ func scanFileForTerm(contents []byte, term string) []match {
 
 func parseCommandLineArguments() *cliArgs {
 	var ignoreDir string
-	flaggy.String(&ignoreDir, "ignore", "ignoreDir", "Name(s) of directories to ignore (comma-separated)")
+	flaggy.String(&ignoreDir, "igd", "ignoreDir", "Name(s) of directories to ignore (comma-separated)")
+
+	var ignoreExt string
+	flaggy.String(&ignoreExt, "ige", "ignoreExt", "File extensions to ignore (comma-separated)")
 
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -139,13 +170,18 @@ func parseCommandLineArguments() *cliArgs {
 	flaggy.Parse()
 
 	dirs := strings.Split(ignoreDir, ",")
-
 	for i, dir := range dirs {
 		dirs[i] = strings.TrimSpace(dir)
 	}
 
+	exts := strings.Split(ignoreExt, ",")
+	for i, ext := range exts {
+		exts[i] = strings.TrimSpace(ext)
+	}
+
 	return &cliArgs{
 		IgnoreDirs: dirs,
+		IgnoreExts: exts,
 		BaseDir:    baseDir,
 		Term:       term,
 	}
