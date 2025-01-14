@@ -139,7 +139,7 @@ func scanFileForTerm(contents []byte, term string) []match {
 		}
 
 		idx := strings.Index(line, term)
-		lowerBound := Max(idx-len(term)-10, 0)
+		lowerBound := Max(idx-10, 0)
 		upperBound := Min(idx+len(term)+10, len(line))
 		substr := line[lowerBound:upperBound]
 
