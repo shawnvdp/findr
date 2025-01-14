@@ -1,6 +1,6 @@
 # findr
 
-A simple CLI to find files containing a specific search term.
+A simple CLI to find files containing a specific search term, concurrently searching an amount of files equivalent to your number of logical CPUs.
 
 ![example](./assets/example.gif)
 
