@@ -35,6 +35,7 @@ type match struct {
 var (
 	DIRECTORIES_SEARCHED int
 	FILES_SEARCHED       int
+	VERSION              string
 )
 
 func main() {
@@ -151,10 +152,10 @@ func scanFileForTerm(contents []byte, term string) []match {
 
 func parseCommandLineArguments() *cliArgs {
 	var ignoreDir string
-	flaggy.String(&ignoreDir, "igd", "ignoreDir", "Name(s) of directories to ignore (comma-separated)")
+	flaggy.String(&ignoreDir, "xd", "ignoreDir", "Name(s) of directories to ignore (comma-separated)")
 
 	var ignoreExt string
-	flaggy.String(&ignoreExt, "ige", "ignoreExt", "File extensions to ignore (comma-separated)")
+	flaggy.String(&ignoreExt, "xe", "ignoreExt", "File extensions to ignore (comma-separated)")
 
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -162,10 +163,12 @@ func parseCommandLineArguments() *cliArgs {
 	}
 
 	var baseDir string = currentDir
-	flaggy.String(&baseDir, "base", "baseDir", "Base directory path to start from")
+	flaggy.String(&baseDir, "b", "baseDir", "Base directory path to start from")
 
 	var term string
-	flaggy.String(&term, "term", "searchTerm", "Term to search")
+	flaggy.String(&term, "t", "searchTerm", "Term to search")
+
+	flaggy.SetVersion(VERSION)
 
 	flaggy.Parse()
 

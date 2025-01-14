@@ -2,7 +2,7 @@ run:
 	go run main.go
 
 build:
-	go build -o findr.exe
+	go build -ldflags='-X main.VERSION=$(VERSION)' -o findr.exe
 
 test:
 	go test -v
