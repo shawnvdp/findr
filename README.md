@@ -2,6 +2,8 @@
 
 A simple CLI to find files containing a specific search term.
 
+![example](./assets/example.gif)
+
 # Usage
 
 ```
